@@ -1,0 +1,7 @@
+[package]
+name = "lsblk"
+version = "0.1.0"
+authors = ["Phil Turnbull <philip.turnbull@gmail.com>"]
+
+[dependencies]
+regex="0.1.55"
