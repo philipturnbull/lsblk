@@ -88,7 +88,7 @@ fn parse_block_file<T: FromStr>(path : &Path, filename : &str) -> Option<T> {
 	let filepath = PathBuf::from(path).join(filename);
 	let mut file = none!(File::open(filepath));
 
-	let ref mut contents = String::new();
+	let contents = &mut String::new();
 	let _ = file.read_to_string(contents).unwrap();
 	T::from_str(contents.trim()).ok()
 }
@@ -184,7 +184,7 @@ fn parse_uevent_metadata(data : &str) -> Option<BlockMetadata> {
 fn load_uevent_metadata(device : &MajorMinor) -> Option<BlockMetadata> {
 	let path = device.udev_path();
 	let mut file = none!(File::open(path));
-	let ref mut contents = String::new();
+	let contents = &mut String::new();
 	let _ = none!(file.read_to_string(contents));
 	parse_uevent_metadata(contents)
 }
@@ -201,7 +201,7 @@ fn format_major_minor(majmin: &MajorMinor) -> String {
 }
 
 fn pretty_size(size: Option<u64>) -> String {
-	return match size {
+	match size {
 		Some(size) => format!("{}", size),
 		None => "?".into(),
 	}
@@ -232,7 +232,7 @@ fn print_blocks(blocks : Vec<Block>) {
 
 	let mut name_len = 0;
 	let mut size_len = 0;
-	for row in rows.as_slice() {
+	for row in &rows[..] {
 		name_len = std::cmp::max(name_len, row.name.len());
 		size_len = std::cmp::max(size_len, row.size.len());
 	}
