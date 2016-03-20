@@ -137,6 +137,7 @@ fn read_block(dir : DirEntry) -> Option<Block> {
 }
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 struct KeyValue<'a> {
 	key : &'a str,
 	value : &'a str,
@@ -148,6 +149,19 @@ fn parse_line(line : &str) -> Option<KeyValue> {
 	re.captures(line).map(|caps| {
 		KeyValue { key : caps.at(1).unwrap(), value : caps.at(2).unwrap() }
 	})
+}
+
+#[test]
+fn test_parse_line() {
+	assert!(parse_line("E:ID_ATA_FEATURE_SET_PM=1") ==
+		Some(KeyValue { key:"ID_ATA_FEATURE_SET_PM", value: "1"}));
+
+	assert!(parse_line("E:KEY=one two three") ==
+		Some(KeyValue { key:"KEY", value: "one two three"}));
+
+	assert!(parse_line("W:12") == None);
+	assert!(parse_line("E:ID_ATA_FEATURE_SET_PM") == None);
+	assert!(parse_line("E:ID_ATA_FEATURE_SET_PM=1=1") == None);
 }
 
 fn parse_uevent_metadata(data : &str) -> Option<BlockMetadata> {
