@@ -24,8 +24,8 @@ macro_rules! none {
 
 #[derive(Debug)]
 struct MajorMinor {
-	major : i8,
-	minor : i8,
+	major : u8,
+	minor : u8,
 }
 
 impl MajorMinor {
@@ -53,8 +53,8 @@ impl FromStr for MajorMinor {
 
 		invalid!(re.captures(s).map(|caps| {
 			MajorMinor {
-				major: caps.at(1).unwrap().parse::<i8>().unwrap(),
-				minor: caps.at(2).unwrap().parse::<i8>().unwrap(),
+				major: caps.at(1).unwrap().parse::<u8>().unwrap(),
+				minor: caps.at(2).unwrap().parse::<u8>().unwrap(),
 			}
 		}), "MajorMinor::from_str")
 	}
@@ -212,6 +212,15 @@ struct Row<'a> {
 
 fn format_major_minor(majmin: &MajorMinor) -> String {
 	return format!("{:>3}:{:<3}", majmin.major, majmin.minor);
+}
+
+#[test]
+fn test_format_major_minor() {
+	assert!(format_major_minor(&MajorMinor { major:   1, minor:   0 }) == "  1:0  ");
+	assert!(format_major_minor(&MajorMinor { major:  10, minor:   0 }) == " 10:0  ");
+	assert!(format_major_minor(&MajorMinor { major:   1, minor:  20 }) == "  1:20 ");
+	assert!(format_major_minor(&MajorMinor { major: 100, minor:  20 }) == "100:20 ");
+	assert!(format_major_minor(&MajorMinor { major: 100, minor: 200 }) == "100:200");
 }
 
 fn pretty_size(size: Option<u64>) -> String {
