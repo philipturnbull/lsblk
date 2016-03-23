@@ -61,6 +61,7 @@ impl FromStr for MajorMinor {
 }
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 struct BlockMetadata {
 	id_type : String,
 	id_fs_type : Option<String>,
@@ -193,6 +194,40 @@ fn parse_uevent_metadata(data : &str) -> Option<BlockMetadata> {
 			}),
 		_ => None
 	}
+}
+
+#[test]
+fn test_parse_uevent_metadata() {
+	assert!(
+		parse_uevent_metadata("E:ID_TYPE=disk") ==
+		Some(BlockMetadata {
+			id_type: "disk".to_string(),
+			id_fs_type: None,
+			id_fs_uuid: None,
+		})
+	);
+
+	assert!(
+		parse_uevent_metadata("E:ID_TYPE=disk\nE:ID_FS_TYPE=ext4") ==
+		Some(BlockMetadata {
+			id_type: "disk".to_string(),
+			id_fs_type: Some("ext4".to_string()),
+			id_fs_uuid: None,
+		})
+	);
+
+	assert!(
+		parse_uevent_metadata("E:ID_FS_TYPE=ext4") == None
+	);
+
+	assert!(
+		parse_uevent_metadata("E:ID_TYPE=disk\nE:ID_FS_UUID=eca1e7f9-42c7-49b7-9f42-bec0c3e975e6") ==
+		Some(BlockMetadata {
+			id_type: "disk".to_string(),
+			id_fs_type: None,
+			id_fs_uuid: Some("eca1e7f9-42c7-49b7-9f42-bec0c3e975e6".to_string()),
+		})
+	);
 }
 
 fn load_uevent_metadata(device : &MajorMinor) -> Option<BlockMetadata> {
