@@ -258,11 +258,39 @@ fn test_format_major_minor() {
 	assert!(format_major_minor(&MajorMinor { major: 100, minor: 200 }) == "100:200");
 }
 
+fn pretty_units(size : u64, power : u32, precision : usize, suffix : &str) -> String {
+	let divisor = (1024 as u64).pow(power) as f64;
+	let n = (size as f64) / divisor;
+
+	format!("{0:>4.1$}{2}", n, precision, suffix)
+}
+
 fn pretty_size(size: Option<u64>) -> String {
 	match size {
-		Some(size) => format!("{}", size),
-		None => "?".into(),
+		Some(size) => match size {
+			size if size < 1024 => format!("{:>5}", size),
+			size if size <= ((1024 as u64).pow(2)) => pretty_units(size, 1, 0, "K"),
+			size if size <= ((1024 as u64).pow(3)) => pretty_units(size, 2, 1, "M"),
+			size if size <= ((1024 as u64).pow(4)) => pretty_units(size, 3, 0, "G"),
+			size if size <= ((1024 as u64).pow(5)) => pretty_units(size, 4, 0, "T"),
+			size if size <= ((1024 as u64).pow(6)) => pretty_units(size, 5, 0, "P"),
+			size if size <= ((1024 as u64).pow(7)) => pretty_units(size, 6, 0, "E"),
+			size if size <= ((1024 as u64).pow(8)) => pretty_units(size, 7, 0, "Z"),
+			_ => "big".into(),
+		},
+		None => "     ".into(),
 	}
+}
+
+#[test]
+fn test_pretty_size() {
+	assert!("     " == pretty_size(None));
+	assert!(" 1023" == pretty_size(Some(1023)));
+	assert!("   1K" == pretty_size(Some(1024)));
+	assert!("57.3M" == pretty_size(Some(60063744)));
+	assert!("   4G" == pretty_size(Some(4292870144)));
+	assert!("  28G" == pretty_size(Some(30063722496)));
+	assert!("  32G" == pretty_size(Some(34359738368)));
 }
 
 fn print_blocks(blocks : Vec<Block>) {
