@@ -358,8 +358,8 @@ fn print_blocks(blocks : Vec<Block>) {
 	let mut name_len = 0;
 	let mut size_len = 0;
 	for row in &rows[..] {
-		name_len = std::cmp::max(name_len, row.name.len());
-		size_len = std::cmp::max(size_len, row.size.len());
+		name_len = std::cmp::max(name_len, row.name.chars().count());
+		size_len = std::cmp::max(size_len, row.size.chars().count());
 	}
 
 	for row in rows {
