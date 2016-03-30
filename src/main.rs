@@ -73,6 +73,7 @@ struct Partition {
 	name : String,
 	majmin : MajorMinor,
 	size : Option<u64>,
+	readonly : Option<u64>,
 
 	metadata : Option<BlockMetadata>,
 }
@@ -82,6 +83,7 @@ struct Block {
 	name : String,
 	majmin : MajorMinor,
 	size : Option<u64>,
+	readonly : Option<u64>,
 	partitions : Vec<Partition>,
 }
 
@@ -117,8 +119,9 @@ fn read_partitions(path : &Path, block_name : &str) -> Vec<Partition> {
 			let majmin = majmin.unwrap();
 
 			let size = parse_sector_file(entry_path, "size");
+			let readonly = parse_block_file(entry_path, "ro");
 			let meta = load_uevent_metadata(&majmin);
-			ps.push(Partition { name: entry_name, majmin: majmin, size: size, metadata: meta })
+			ps.push(Partition { name: entry_name, majmin: majmin, size: size, readonly: readonly, metadata: meta })
 		}
 	}
 	ps
@@ -133,8 +136,9 @@ fn read_block(dir : DirEntry) -> Option<Block> {
 	match majmin {
 		Some(majmin) => {
 			let size = parse_sector_file(path, "size");
+			let readonly = parse_block_file(path, "ro");
 			let parts = read_partitions(path, &name);
-			Some(Block { name: name, majmin: majmin, size: size, partitions: parts })
+			Some(Block { name: name, majmin: majmin, size: size, readonly: readonly, partitions: parts })
 		},
 		_ => None,
 	}
@@ -254,6 +258,7 @@ struct Row {
 	name: String,
 	majmin: String,
 	size: String,
+	readonly: &'static str,
 	row_type: BlockType,
 }
 
@@ -305,6 +310,23 @@ fn test_pretty_size() {
 	assert!("  32G" == pretty_size(Some(34359738368)));
 }
 
+fn pretty_readonly(readonly: Option<u64>) -> &'static str {
+	match readonly {
+		Some(0) => "0",
+		Some(_) => "1",
+		None => " ",
+	}
+}
+
+#[test]
+fn test_pretty_readonly() {
+	assert!(" " == pretty_readonly(None));
+	assert!("0" == pretty_readonly(Some(0)));
+	assert!("1" == pretty_readonly(Some(1)));
+	assert!("1" == pretty_readonly(Some(2)));
+	assert!("1" == pretty_readonly(Some(1234)));
+}
+
 fn print_blocks(blocks : Vec<Block>) {
 	let mut rows = Vec::new();
 
@@ -313,6 +335,7 @@ fn print_blocks(blocks : Vec<Block>) {
 			name: block.name.to_owned(),
 			majmin: format_major_minor(&block.majmin),
 			size: pretty_size(block.size),
+			readonly: pretty_readonly(block.readonly),
 			row_type: BlockType::Disk,
 		});
 
@@ -326,6 +349,7 @@ fn print_blocks(blocks : Vec<Block>) {
 				name: name,
 				majmin: format_major_minor(&part.majmin),
 				size: pretty_size(part.size),
+				readonly: pretty_readonly(part.readonly),
 				row_type: BlockType::Partition,
 			});
 		}
@@ -339,10 +363,11 @@ fn print_blocks(blocks : Vec<Block>) {
 	}
 
 	for row in rows {
-		println!("{1:<0$} {2} {4:>3$} {5:<4}",
+		println!("{1:<0$} {2} {4:>3$} {5} {6:<4}",
 			name_len, row.name,
 			row.majmin,
 			size_len, row.size,
+			row.readonly,
 			describe_block_type(row.row_type),
 		);
 	}
