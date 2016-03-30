@@ -238,11 +238,20 @@ fn load_uevent_metadata(device : &MajorMinor) -> Option<BlockMetadata> {
 	parse_uevent_metadata(contents)
 }
 
-struct Row<'a> {
+enum BlockType { Disk, Partition }
+
+fn describe_block_type(blocktype : BlockType) -> &'static str {
+	match blocktype {
+		BlockType::Disk => "disk",
+		BlockType::Partition => "part",
+	}
+}
+
+struct Row {
 	name: String,
 	majmin: String,
 	size: String,
-	row_type: &'a str,
+	row_type: BlockType,
 }
 
 fn format_major_minor(majmin: &MajorMinor) -> String {
@@ -301,7 +310,7 @@ fn print_blocks(blocks : Vec<Block>) {
 			name: block.name.to_owned(),
 			majmin: format_major_minor(&block.majmin),
 			size: pretty_size(block.size),
-			row_type: "disk",
+			row_type: BlockType::Disk,
 		});
 
 		for part in block.partitions {
@@ -311,7 +320,7 @@ fn print_blocks(blocks : Vec<Block>) {
 				name: name,
 				majmin: format_major_minor(&part.majmin),
 				size: pretty_size(part.size),
-				row_type: "part",
+				row_type: BlockType::Partition,
 			});
 		}
 	}
@@ -328,7 +337,7 @@ fn print_blocks(blocks : Vec<Block>) {
 			name_len, row.name,
 			row.majmin,
 			size_len, row.size,
-			row.row_type
+			describe_block_type(row.row_type),
 		);
 	}
 }
