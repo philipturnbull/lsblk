@@ -316,8 +316,11 @@ fn print_blocks(blocks : Vec<Block>) {
 			row_type: BlockType::Disk,
 		});
 
-		for part in block.partitions {
-			let mut name = String::from("\u{2514}\u{2500}");
+		for (i, part) in block.partitions.iter().enumerate() {
+			let mut name = match i+1 == block.partitions.len() {
+				true  => String::from("\u{2514}\u{2500}"),
+				false => String::from("\u{251C}\u{2500}"),
+			};
 			name.push_str(part.name.as_str());
 			rows.push(Row {
 				name: name,
