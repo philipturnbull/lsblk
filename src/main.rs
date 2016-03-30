@@ -94,6 +94,9 @@ fn parse_block_file<T: FromStr>(path : &Path, filename : &str) -> Option<T> {
 	T::from_str(contents.trim()).ok()
 }
 
+fn parse_sector_file(path : &Path, filename : &str) -> Option<u64> {
+	parse_block_file::<u64>(path, filename).map(|x| x*512)
+}
 
 fn read_partitions(path : &Path, block_name : &str) -> Vec<Partition> {
 	let mut ps = Vec::new();
@@ -113,7 +116,7 @@ fn read_partitions(path : &Path, block_name : &str) -> Vec<Partition> {
 
 			let majmin = majmin.unwrap();
 
-			let size = parse_block_file(entry_path, "size");
+			let size = parse_sector_file(entry_path, "size");
 			let meta = load_uevent_metadata(&majmin);
 			ps.push(Partition { name: entry_name, majmin: majmin, size: size, metadata: meta })
 		}
@@ -129,7 +132,7 @@ fn read_block(dir : DirEntry) -> Option<Block> {
 	let majmin : Option<MajorMinor> = parse_block_file(path, "dev");
 	match majmin {
 		Some(majmin) => {
-			let size : Option<u64> = parse_block_file(path, "size");
+			let size = parse_sector_file(path, "size");
 			let parts = read_partitions(path, &name);
 			Some(Block { name: name, majmin: majmin, size: size, partitions: parts })
 		},
