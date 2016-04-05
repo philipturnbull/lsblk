@@ -371,20 +371,18 @@ fn print_blocks(blocks : Vec<Block>) {
 	}
 
 	let mut name_len = 0;
-	let mut size_len = 0;
 	for row in &rows[..] {
 		name_len = std::cmp::max(name_len, row.name.chars().count());
-		size_len = std::cmp::max(size_len, row.size.chars().count());
 	}
 
 
 	println!("{1:<0$} MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT", name_len, "NAME");
 	for row in rows {
-		println!("{1:<0$} {2} {3} {5:>4$} {6} {7:<4}",
+		println!("{1:<0$} {2} {3} {4:>5} {5} {6:<4}",
 			name_len, row.name,
 			row.majmin,
 			row.removable,
-			size_len, row.size,
+			row.size,
 			row.readonly,
 			describe_block_type(row.row_type),
 		);
