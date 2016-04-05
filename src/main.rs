@@ -72,6 +72,7 @@ struct BlockMetadata {
 struct Partition {
 	name : String,
 	majmin : MajorMinor,
+	removable : Option<u64>,
 	size : Option<u64>,
 	readonly : Option<u64>,
 
@@ -82,6 +83,7 @@ struct Partition {
 struct Block {
 	name : String,
 	majmin : MajorMinor,
+	removable : Option<u64>,
 	size : Option<u64>,
 	readonly : Option<u64>,
 	partitions : Vec<Partition>,
@@ -110,6 +112,7 @@ fn read_partitions(path : &Path, block_name : &str) -> Vec<Partition> {
 		let entry_name = entry.file_name();
 		let entry_name = entry_name.to_string_lossy().into_owned();
 		if entry_name.starts_with(block_name) {
+			let removable = parse_block_file(entry_path, "removable");
 			let majmin = parse_block_file(entry_path, "dev");
 
 			if majmin.is_none() {
@@ -121,7 +124,7 @@ fn read_partitions(path : &Path, block_name : &str) -> Vec<Partition> {
 			let size = parse_sector_file(entry_path, "size");
 			let readonly = parse_block_file(entry_path, "ro");
 			let meta = load_uevent_metadata(&majmin);
-			ps.push(Partition { name: entry_name, majmin: majmin, size: size, readonly: readonly, metadata: meta })
+			ps.push(Partition { name: entry_name, removable: removable, majmin: majmin, size: size, readonly: readonly, metadata: meta })
 		}
 	}
 	ps
@@ -135,10 +138,11 @@ fn read_block(dir : DirEntry) -> Option<Block> {
 	let majmin : Option<MajorMinor> = parse_block_file(path, "dev");
 	match majmin {
 		Some(majmin) => {
+			let removable = parse_block_file(path, "removable");
 			let size = parse_sector_file(path, "size");
 			let readonly = parse_block_file(path, "ro");
 			let parts = read_partitions(path, &name);
-			Some(Block { name: name, majmin: majmin, size: size, readonly: readonly, partitions: parts })
+			Some(Block { name: name, removable: removable, majmin: majmin, size: size, readonly: readonly, partitions: parts })
 		},
 		_ => None,
 	}
@@ -257,6 +261,7 @@ fn describe_block_type(blocktype : BlockType) -> &'static str {
 struct Row {
 	name: String,
 	majmin: String,
+	removable: &'static str,
 	size: String,
 	readonly: &'static str,
 	row_type: BlockType,
@@ -273,6 +278,14 @@ fn test_format_major_minor() {
 	assert!(format_major_minor(&MajorMinor { major:   1, minor:  20 }) == "  1:20 ");
 	assert!(format_major_minor(&MajorMinor { major: 100, minor:  20 }) == "100:20 ");
 	assert!(format_major_minor(&MajorMinor { major: 100, minor: 200 }) == "100:200");
+}
+
+fn pretty_removable(removable : Option<u64>) -> &'static str {
+	match removable {
+		Some(0) => " 0",
+		Some(_) => " 1",
+		None => "  ",
+	}
 }
 
 fn pretty_units(size : u64, power : u32, precision : usize, suffix : &str) -> String {
@@ -312,19 +325,19 @@ fn test_pretty_size() {
 
 fn pretty_readonly(readonly: Option<u64>) -> &'static str {
 	match readonly {
-		Some(0) => "0",
-		Some(_) => "1",
-		None => " ",
+		Some(0) => " 0",
+		Some(_) => " 1",
+		None => "  ",
 	}
 }
 
 #[test]
 fn test_pretty_readonly() {
-	assert!(" " == pretty_readonly(None));
-	assert!("0" == pretty_readonly(Some(0)));
-	assert!("1" == pretty_readonly(Some(1)));
-	assert!("1" == pretty_readonly(Some(2)));
-	assert!("1" == pretty_readonly(Some(1234)));
+	assert!("  " == pretty_readonly(None));
+	assert!(" 0" == pretty_readonly(Some(0)));
+	assert!(" 1" == pretty_readonly(Some(1)));
+	assert!(" 1" == pretty_readonly(Some(2)));
+	assert!(" 1" == pretty_readonly(Some(1234)));
 }
 
 fn print_blocks(blocks : Vec<Block>) {
@@ -334,6 +347,7 @@ fn print_blocks(blocks : Vec<Block>) {
 		rows.push(Row {
 			name: block.name.to_owned(),
 			majmin: format_major_minor(&block.majmin),
+			removable: pretty_removable(block.removable),
 			size: pretty_size(block.size),
 			readonly: pretty_readonly(block.readonly),
 			row_type: BlockType::Disk,
@@ -348,6 +362,7 @@ fn print_blocks(blocks : Vec<Block>) {
 			rows.push(Row {
 				name: name,
 				majmin: format_major_minor(&part.majmin),
+				removable: pretty_removable(block.removable),
 				size: pretty_size(part.size),
 				readonly: pretty_readonly(part.readonly),
 				row_type: BlockType::Partition,
@@ -363,9 +378,10 @@ fn print_blocks(blocks : Vec<Block>) {
 	}
 
 	for row in rows {
-		println!("{1:<0$} {2} {4:>3$} {5} {6:<4}",
+		println!("{1:<0$} {2} {3} {5:>4$} {6} {7:<4}",
 			name_len, row.name,
 			row.majmin,
+			row.removable,
 			size_len, row.size,
 			row.readonly,
 			describe_block_type(row.row_type),
