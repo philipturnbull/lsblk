@@ -377,6 +377,8 @@ fn print_blocks(blocks : Vec<Block>) {
 		size_len = std::cmp::max(size_len, row.size.chars().count());
 	}
 
+
+	println!("{1:<0$} MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT", name_len, "NAME");
 	for row in rows {
 		println!("{1:<0$} {2} {3} {5:>4$} {6} {7:<4}",
 			name_len, row.name,
