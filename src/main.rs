@@ -354,9 +354,10 @@ fn print_blocks(blocks : Vec<Block>) {
 		});
 
 		for (i, part) in block.partitions.iter().enumerate() {
-			let mut name = match i+1 == block.partitions.len() {
-				true  => String::from("\u{2514}\u{2500}"),
-				false => String::from("\u{251C}\u{2500}"),
+			let mut name = if i+1 == block.partitions.len() {
+				String::from("\u{2514}\u{2500}")
+			} else {
+				String::from("\u{251C}\u{2500}")
 			};
 			name.push_str(part.name.as_str());
 			rows.push(Row {
