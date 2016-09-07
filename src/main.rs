@@ -1,5 +1,6 @@
 extern crate regex;
 
+use std::collections::HashMap;
 use std::fs;
 use std::fs::DirEntry;
 use std::fs::File;
@@ -77,6 +78,7 @@ struct Partition {
 	readonly : Option<u64>,
 
 	metadata : Option<BlockMetadata>,
+	mountpoint : String,
 }
 
 #[derive(Debug)]
@@ -87,6 +89,7 @@ struct Block {
 	size : Option<u64>,
 	readonly : Option<u64>,
 	partitions : Vec<Partition>,
+	mountpoint : String,
 }
 
 fn parse_block_file<T: FromStr>(path : &Path, filename : &str) -> Option<T> {
@@ -100,6 +103,41 @@ fn parse_block_file<T: FromStr>(path : &Path, filename : &str) -> Option<T> {
 
 fn parse_sector_file(path : &Path, filename : &str) -> Option<u64> {
 	parse_block_file::<u64>(path, filename).map(|x| x*512)
+}
+
+fn parse_proc_mounts_line(line : &str) -> Option<(&str, &str)> {
+	let re = Regex::new(r"^([^ ]+) ([^ ]+) .+$").unwrap();
+
+	re.captures(line).map(|caps| {
+		(caps.at(1).unwrap(), caps.at(2).unwrap())
+	})
+}
+
+fn parse_proc_mounts() -> Option<HashMap<String, String>> {
+	let mut file = none!(File::open("/proc/mounts"));
+	let contents = &mut String::new();
+	let _ = none!(file.read_to_string(contents));
+
+	let mut mounts = HashMap::new();
+
+	for mount in contents.lines().map(parse_proc_mounts_line) {
+		match mount {
+			Some((dev, mountpoint)) => { mounts.insert(String::from(dev), String::from(mountpoint)); }
+			None => {},
+		}
+	}
+
+	Some(mounts)
+}
+
+fn read_partition_mountpoint(name : &String) -> String {
+	let mut path = String::from("/dev/");
+	path.push_str(name.as_str());
+	let mounts = parse_proc_mounts().unwrap();
+	match mounts.get(&path) {
+		Some(mount) => mount.to_owned(),
+		None => String::from(""),
+	}
 }
 
 fn read_partitions(path : &Path, block_name : &str) -> Vec<Partition> {
@@ -124,7 +162,8 @@ fn read_partitions(path : &Path, block_name : &str) -> Vec<Partition> {
 			let size = parse_sector_file(entry_path, "size");
 			let readonly = parse_block_file(entry_path, "ro");
 			let meta = load_uevent_metadata(&majmin);
-			ps.push(Partition { name: entry_name, removable: removable, majmin: majmin, size: size, readonly: readonly, metadata: meta })
+			let mountpoint = read_partition_mountpoint(&entry_name);
+			ps.push(Partition { name: entry_name, removable: removable, majmin: majmin, size: size, readonly: readonly, metadata: meta, mountpoint: mountpoint })
 		}
 	}
 	ps
@@ -142,7 +181,8 @@ fn read_block(dir : DirEntry) -> Option<Block> {
 			let size = parse_sector_file(path, "size");
 			let readonly = parse_block_file(path, "ro");
 			let parts = read_partitions(path, &name);
-			Some(Block { name: name, removable: removable, majmin: majmin, size: size, readonly: readonly, partitions: parts })
+			let mountpoint = String::from("");
+			Some(Block { name: name, removable: removable, majmin: majmin, size: size, readonly: readonly, partitions: parts, mountpoint: mountpoint })
 		},
 		_ => None,
 	}
@@ -265,6 +305,7 @@ struct Row {
 	size: String,
 	readonly: &'static str,
 	row_type: BlockType,
+	mountpoint : String,
 }
 
 fn format_major_minor(majmin: &MajorMinor) -> String {
@@ -351,6 +392,7 @@ fn print_blocks(blocks : Vec<Block>) {
 			size: pretty_size(block.size),
 			readonly: pretty_readonly(block.readonly),
 			row_type: BlockType::Disk,
+			mountpoint: block.mountpoint.to_owned(),
 		});
 
 		for (i, part) in block.partitions.iter().enumerate() {
@@ -367,6 +409,7 @@ fn print_blocks(blocks : Vec<Block>) {
 				size: pretty_size(part.size),
 				readonly: pretty_readonly(part.readonly),
 				row_type: BlockType::Partition,
+				mountpoint: part.mountpoint.to_owned(),
 			});
 		}
 	}
@@ -379,13 +422,14 @@ fn print_blocks(blocks : Vec<Block>) {
 
 	println!("{1:<0$} MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT", name_len, "NAME");
 	for row in rows {
-		println!("{1:<0$} {2} {3} {4:>5} {5} {6:<4}",
+		println!("{1:<0$} {2} {3} {4:>5} {5} {6:<4} {7}",
 			name_len, row.name,
 			row.majmin,
 			row.removable,
 			row.size,
 			row.readonly,
 			describe_block_type(row.row_type),
+			row.mountpoint,
 		);
 	}
 }
