@@ -1,6 +1,7 @@
 extern crate regex;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs;
 use std::fs::DirEntry;
 use std::fs::File;
@@ -130,13 +131,45 @@ fn parse_proc_mounts() -> Option<HashMap<String, String>> {
 	Some(mounts)
 }
 
+fn parse_proc_swaps_line(line : &str) -> Option<&str> {
+	let re = Regex::new(r"^(/[^ ]+) +.+$").unwrap();
+
+	re.captures(line).map(|caps| {
+		caps.at(1).unwrap()
+	})
+}
+
+fn parse_proc_swaps() -> Option<HashSet<String>> {
+	let mut file = none!(File::open("/proc/swaps"));
+	let contents = &mut String::new();
+	let _ = none!(file.read_to_string(contents));
+
+	let mut swaps = HashSet::new();
+
+	for swap in contents.lines().map(parse_proc_swaps_line) {
+		match swap {
+			Some(dev) => { swaps.insert(String::from(dev)); }
+			None => {}
+		}
+	}
+
+	Some(swaps)
+}
+
 fn read_partition_mountpoint(name : &String) -> String {
 	let mut path = String::from("/dev/");
 	path.push_str(name.as_str());
 	let mounts = parse_proc_mounts().unwrap();
 	match mounts.get(&path) {
 		Some(mount) => mount.to_owned(),
-		None => String::from(""),
+		None => {
+			let swaps = parse_proc_swaps().unwrap();
+			return String::from(if swaps.contains(&path) {
+				"[SWAP]"
+			} else {
+				""
+			})
+		}
 	}
 }
 
