@@ -433,11 +433,7 @@ fn print_blocks(blocks : Vec<Block>) {
 		}
 	}
 
-	let mut name_len = 0;
-	for row in &rows[..] {
-		name_len = std::cmp::max(name_len, row.name.chars().count());
-	}
-
+	let name_len = rows.iter().map(|row| row.name.chars().count()).max().unwrap_or(0);
 
 	println!("{1:<0$} MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT", name_len, "NAME");
 	for row in rows {
