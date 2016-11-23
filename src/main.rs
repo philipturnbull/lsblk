@@ -33,15 +33,15 @@ struct MajorMinor {
 impl MajorMinor {
 	fn to_string(&self) -> String {
 		let mut s = String::new();
-		s.push_str(self.major.to_string().as_str());
+		s.push_str(&self.major.to_string());
 		s.push_str(":");
-		s.push_str(self.minor.to_string().as_str());
+		s.push_str(&self.minor.to_string());
 		s
 	}
 
 	fn udev_path(&self) -> PathBuf {
 		let mut filename = String::from("b");
-		filename.push_str(self.to_string().as_str());
+		filename.push_str(&self.to_string());
 		let mut path = PathBuf::from("/run/udev/data");
 		path.push(filename);
 		path
@@ -432,7 +432,7 @@ fn print_blocks(blocks : Vec<Block>) {
 			} else {
 				String::from("\u{251C}\u{2500}")
 			};
-			name.push_str(part.name.as_str());
+			name.push_str(&part.name);
 			rows.push(Row {
 				name: name,
 				majmin: format_major_minor(&part.majmin),
