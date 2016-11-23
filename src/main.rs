@@ -106,11 +106,11 @@ fn parse_sector_file(path : &Path, filename : &str) -> Option<u64> {
 	parse_block_file::<u64>(path, filename).map(|x| x*512)
 }
 
-fn parse_proc_mounts_line(line : &str) -> Option<(&str, &str)> {
+fn parse_proc_mounts_line(line : &str) -> Option<(String, String)> {
 	let re = Regex::new(r"^([^ ]+) ([^ ]+) .+$").unwrap();
 
 	re.captures(line).map(|caps| {
-		(caps.at(1).unwrap(), caps.at(2).unwrap())
+		(caps.at(1).unwrap().to_owned(), caps.at(2).unwrap().to_owned())
 	})
 }
 
@@ -119,22 +119,17 @@ fn parse_proc_mounts() -> Option<HashMap<String, String>> {
 	let contents = &mut String::new();
 	let _ = none!(file.read_to_string(contents));
 
-	let mut mounts = HashMap::new();
-
-	for mount in contents.lines().map(parse_proc_mounts_line) {
-		if let Some((dev, mountpoint)) = mount {
-			mounts.insert(String::from(dev), String::from(mountpoint));
-		}
-	}
+	let mounts =
+		contents.lines().filter_map(parse_proc_mounts_line).collect();
 
 	Some(mounts)
 }
 
-fn parse_proc_swaps_line(line : &str) -> Option<&str> {
+fn parse_proc_swaps_line(line : &str) -> Option<String> {
 	let re = Regex::new(r"^(/[^ ]+) +.+$").unwrap();
 
 	re.captures(line).map(|caps| {
-		caps.at(1).unwrap()
+		caps.at(1).unwrap().to_owned()
 	})
 }
 
@@ -143,13 +138,8 @@ fn parse_proc_swaps() -> Option<HashSet<String>> {
 	let contents = &mut String::new();
 	let _ = none!(file.read_to_string(contents));
 
-	let mut swaps = HashSet::new();
-
-	for swap in contents.lines().map(parse_proc_swaps_line) {
-		if let Some(dev) = swap {
-			swaps.insert(String::from(dev));
-		}
-	}
+        let swaps =
+		contents.lines().filter_map(parse_proc_swaps_line).collect();
 
 	Some(swaps)
 }
