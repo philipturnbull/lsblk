@@ -122,9 +122,8 @@ fn parse_proc_mounts() -> Option<HashMap<String, String>> {
 	let mut mounts = HashMap::new();
 
 	for mount in contents.lines().map(parse_proc_mounts_line) {
-		match mount {
-			Some((dev, mountpoint)) => { mounts.insert(String::from(dev), String::from(mountpoint)); }
-			None => {},
+		if let Some((dev, mountpoint)) = mount {
+			mounts.insert(String::from(dev), String::from(mountpoint));
 		}
 	}
 
@@ -147,24 +146,23 @@ fn parse_proc_swaps() -> Option<HashSet<String>> {
 	let mut swaps = HashSet::new();
 
 	for swap in contents.lines().map(parse_proc_swaps_line) {
-		match swap {
-			Some(dev) => { swaps.insert(String::from(dev)); }
-			None => {}
+		if let Some(dev) = swap {
+			swaps.insert(String::from(dev));
 		}
 	}
 
 	Some(swaps)
 }
 
-fn read_partition_mountpoint(name : &String) -> String {
+fn read_partition_mountpoint(name : &str) -> String {
 	let mut path = String::from("/dev/");
-	path.push_str(name.as_str());
+	path.push_str(name);
 	let mounts = parse_proc_mounts().unwrap();
 	match mounts.get(&path) {
 		Some(mount) => mount.to_owned(),
 		None => {
 			let swaps = parse_proc_swaps().unwrap();
-			return String::from(if swaps.contains(&path) {
+			String::from(if swaps.contains(&path) {
 				"[SWAP]"
 			} else {
 				""
