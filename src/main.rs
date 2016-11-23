@@ -34,9 +34,7 @@ struct MajorMinor {
 impl MajorMinor {
 	fn udev_path(&self) -> PathBuf {
 		let filename = format!("b{}", self);
-		let mut path = PathBuf::from("/run/udev/data");
-		path.push(filename);
-		path
+		PathBuf::from("/run/udev/data").join(filename)
 	}
 }
 
