@@ -145,8 +145,7 @@ fn parse_proc_swaps() -> Option<HashSet<String>> {
 }
 
 fn read_partition_mountpoint(name : &str) -> String {
-	let mut path = String::from("/dev/");
-	path.push_str(name);
+	let path = format!("/dev/{}", name);
 	let mounts = parse_proc_mounts().unwrap();
 	match mounts.get(&path) {
 		Some(mount) => mount.to_owned(),
@@ -417,12 +416,11 @@ fn print_blocks(blocks : Vec<Block>) {
 		});
 
 		for (i, part) in block.partitions.iter().enumerate() {
-			let mut name = if i+1 == block.partitions.len() {
-				String::from("\u{2514}\u{2500}")
+			let name = if i+1 == block.partitions.len() {
+				format!("\u{2514}\u{2500}{}", part.name)
 			} else {
-				String::from("\u{251C}\u{2500}")
+				format!("\u{251C}\u{2500}{}", part.name)
 			};
-			name.push_str(&part.name);
 			rows.push(Row {
 				name: name,
 				majmin: format_major_minor(&part.majmin),
