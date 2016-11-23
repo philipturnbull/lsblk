@@ -1,5 +1,6 @@
 extern crate regex;
 
+use std::fmt;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs;
@@ -31,20 +32,17 @@ struct MajorMinor {
 }
 
 impl MajorMinor {
-	fn to_string(&self) -> String {
-		let mut s = String::new();
-		s.push_str(&self.major.to_string());
-		s.push_str(":");
-		s.push_str(&self.minor.to_string());
-		s
-	}
-
 	fn udev_path(&self) -> PathBuf {
-		let mut filename = String::from("b");
-		filename.push_str(&self.to_string());
+		let filename = format!("b{}", self);
 		let mut path = PathBuf::from("/run/udev/data");
 		path.push(filename);
 		path
+	}
+}
+
+impl fmt::Display for MajorMinor {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "{}:{}", self.major, self.minor)
 	}
 }
 
